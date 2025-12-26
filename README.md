@@ -5,6 +5,9 @@ Automate your LinkedIn presence with AI-powered content generation. This n8n wor
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support%20This%20Project-yellow.svg?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/rihabrahali)
 [![n8n](https://img.shields.io/badge/n8n-Workflow-orange.svg?style=for-the-badge)](https://n8n.io)
 
+
+![automated_n8n_linkedin_posting](./images/workflow.png)
+
 ## ✨ Features
 
 - **🤖 AI-Powered Content Generation**: Uses Ollama with Llama 3.1 (you can change any model you need) to create professional LinkedIn posts
