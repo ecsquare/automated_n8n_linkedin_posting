@@ -1,0 +1,614 @@
+{
+  "name": "LinkedIn Content Automation System",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger - 2AM Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -1088
+      ],
+      "id": "f2126836-8168-4351-a037-b279851f63bc",
+      "notes": "Runs every night at 2 AM"
+    },
+    {
+      "parameters": {
+        "url": "https://news.ycombinator.com/",
+        "options": {}
+      },
+      "name": "Scrape Trending Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -48,
+        -1088
+      ],
+      "id": "505c8588-6f79-4f85-b9b8-328b096b3e0b",
+      "notes": "Replace with your niche-specific sources"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract trending topics from Hacker News\nconst html = $input.first().json.data;\nconst topics = [];\n\n// Regex to match title lines with links\nconst titleRegex = /<span class=\"titleline\"><a href=\"[^\"]*\"[^>]*>(.*?)<\\/a>/g;\n\nlet match;\nlet count = 0;\n\nwhile ((match = titleRegex.exec(html)) !== null && count < 30) {\n  // Decode HTML entities and clean up the title\n  let title = match[1]\n    .replace(/&#x2F;/g, '/')\n    .replace(/&#x27;/g, \"'\")\n    .replace(/&quot;/g, '\"')\n    .replace(/&amp;/g, '&')\n    .replace(/<[^>]*>/g, ''); // Remove any remaining HTML tags\n  \n  topics.push({\n    title: title,\n    rank: count + 1,\n    date: new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format\n  });\n  \n  count++;\n}\n\nreturn [{ \n  json: { \n    topics: topics,\n    extractedAt: new Date().toISOString(),\n    source: 'Hacker News',\n    totalTopics: topics.length\n  } \n}];"
+      },
+      "name": "Parse Topics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -1088
+      ],
+      "id": "14cb41e8-6b16-4dea-a8d7-8cb2838dd441"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "name": "Ollama AI Agent - Generate Posts",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -1072
+      ],
+      "id": "65154c5a-0d97-4860-8175-60ed8b2c6493",
+      "credentials": {
+        "ollamaApi": {
+          "id": "YOUR_OLLAMA_CREDENTIAL_ID",
+          "name": "Ollama account"
+        }
+      },
+      "notes": "Local AI generates content drafts"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posting Schedule",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Approved",
+              "displayName": "Approved",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Add to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        -1088
+      ],
+      "id": "d0857795-e759-4e97-8467-5e997710a70c",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Writes drafts to Sheet for review"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posting Schedule",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "name": "Read Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -48,
+        -584
+      ],
+      "id": "c5d71fc2-5938-4604-87e9-1a5cd0a4ae8c",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Reads all posts from sheet"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a LinkedIn content creator for tech professionals. Your task is to analyze trending topics and create an engaging LinkedIn post.\n\nTRENDING TOPICS FROM HACKER NEWS:\n{{ JSON.stringify($json.topics) }}\n\nTASK:\n1. Analyze all the topics above\n2. Select ONE topic that will:\n   - Resonate with tech professionals on LinkedIn\n   - Spark meaningful discussion\n   - Provide career or industry insights\n   - Be relevant to developers, CTOs, tech leaders, or engineers\n\n3. Create a high-engagement LinkedIn post (200-300 words) following these guidelines:\n   - Strong hook in the first line to stop scrolling\n   - Short paragraphs (1-2 sentences) with line breaks\n   - Professional yet conversational tone\n   - Share insights or perspective on why this matters\n   - End with an engaging question to drive comments\n   - Include 3-5 relevant hashtags\n\nOUTPUT REQUIREMENTS:\nYou MUST return your response as a valid JSON object with this exact structure:\n\n{\n   \"content\": article generated\n}\n\n\nIMPORTANT:\n- Do NOT include any text before or after the JSON object\n- Do NOT use markdown formatting like ** or ## in the post\n- Return ONLY the JSON object, nothing else\n\nNow analyze the topics and create the LinkedIn post.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        432,
+        -1296
+      ],
+      "id": "1b0fcc55-1965-4ae7-b6bc-9148a0076497",
+      "name": "AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{ \n  \"content\": \"\"\n}\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        528,
+        -1072
+      ],
+      "id": "8892b052-13f9-45e1-bcd2-b1045767c6f6",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "person": "YOUR_LINKEDIN_PERSON_ID",
+        "text": "={{ $json.content }}",
+        "additionalFields": {}
+      },
+      "name": "LinkedIn1",
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        480,
+        -688
+      ],
+      "id": "a29e6a3c-f19a-4064-9d15-50ee02cf2b0f",
+      "retryOnFail": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "YOUR_LINKEDIN_CREDENTIAL_ID",
+          "name": "LinkedIn account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "content": "Search Trending Topics From YC ",
+        "height": 704,
+        "width": 688,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -344,
+        -1440
+      ],
+      "id": "8a408096-b5f5-4e93-a5a0-94834077aafe",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Generate Viral Linkedin Content ",
+        "height": 704,
+        "width": 464,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -1440
+      ],
+      "id": "d83345ce-68fb-4d77-9d00-9aafdb20261b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Add Content to google Sheets for Approval",
+        "height": 704,
+        "width": 464
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        824,
+        -1440
+      ],
+      "id": "3c62422c-fd27-426a-87c2-feb3796508fc",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -592
+      ],
+      "id": "f463da86-1350-4b1b-8d1d-b99507ce1394",
+      "notes": "Checks for approved posts every 15 minutes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "yes"
+            }
+          ]
+        }
+      },
+      "name": "Filter Approved Posts and Best posting time",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -584
+      ],
+      "id": "89af7d14-1b38-40da-bf75-432ded7b393b"
+    },
+    {
+      "parameters": {
+        "content": "Linkedin Posting",
+        "height": 320,
+        "width": 1616,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -736
+      ],
+      "id": "44d14f2c-1215-49cd-804e-614ca1476383",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Posting Schedule",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "sent"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "content",
+              "displayName": "content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Set Content as Published",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        944,
+        -576
+      ],
+      "id": "f6960ac0-3e6a-448d-acc0-2b014fde8392",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Writes drafts to Sheet for review"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        608,
+        -864
+      ],
+      "id": "44623d28-1095-404b-8a8c-b38f91c14bda",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "YOUR_OLLAMA_CREDENTIAL_ID",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "69e1807a-6592-48cd-bb50-b334a65fa659",
+              "name": "content",
+              "value": "={{ $json.output.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        -1088
+      ],
+      "id": "2baa00fd-64ed-4c9e-9fa7-6b1c5351b703",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        752,
+        -576
+      ],
+      "id": "0a5d73a9-6128-45bc-b339-483ef0419f37",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger - 2AM Daily": {
+      "main": [
+        [
+          {
+            "node": "Scrape Trending Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Trending Topics": {
+      "main": [
+        [
+          {
+            "node": "Parse Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter Approved Posts and Best posting time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Topics": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama AI Agent - Generate Posts": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger every 15 min": {
+      "main": [
+        [
+          {
+            "node": "Read Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Approved Posts and Best posting time": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "LinkedIn1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LinkedIn1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Add to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Set Content as Published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
